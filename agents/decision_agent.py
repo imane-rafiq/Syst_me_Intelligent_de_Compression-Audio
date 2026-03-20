@@ -1,28 +1,30 @@
-"""
-AGENT 3: DECISION AGENT (LLM)
-=============================
-
-Responsibility:
-- Call Claude API (or another LLM)
-- Analyze audio metadata + features
-- Decide best codec and bitrate
-- Provide reasoning for the choice
-
-Simple methods:
-1. decide() - Main entry point
-2. call_llm() - Call Claude API
-3. parse_llm_response() - Parse decision from LLM
-4. fallback_decision() - Non-LLM heuristic decision
-"""
-
 import json
 import os
 from typing import Dict, Optional
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
+
+class SimpleLogger:
+    def __init__(self, name: str):
+        self.name = name
+
+    def info(self, msg: str):
+        print(f"ℹ️ [{self.name}] {msg}")
+
+    def success(self, msg: str):
+        print(f"✅ [{self.name}] {msg}")
+
+    def warning(self, msg: str):
+        print(f"⚠️ [{self.name}] {msg}")
+
+    def error(self, msg: str):
+        print(f"❌ [{self.name}] {msg}")
+
 
 class DecisionAgent:
-    """Use LLM to decide compression parameters."""
-
     ALLOWED_CODECS = {"mp3", "aac", "opus", "ogg", "flac"}
     ALLOWED_BITRATES = {32, 48, 64, 96, 128, 192, 256}
 
@@ -30,34 +32,29 @@ class DecisionAgent:
         self.logger = SimpleLogger("DecisionAgent")
         self.api_key = os.getenv("ANTHROPIC_API_KEY")
 
-    def decide(self, metadata: Dict, features: Dict) -> Optional[Dict]:
-        """
-        Decide compression parameters using LLM or fallback.
+        if self.api_key:
+            self.logger.success("ANTHROPIC_API_KEY loaded")
+        else:
+            self.logger.warning("ANTHROPIC_API_KEY not found")
 
-        Returns:
-            Dict with:
-            - codec
-            - bitrate_kbps
-            - sample_rate_hz
-            - channels
-            - reasoning
-            - decision_source
-        """
+    def decide(self, metadata: Dict, features: Dict) -> Optional[Dict]:
         try:
             if self.api_key:
-                decision = self.call_llm(metadata, features)
-                if decision:
-                    return decision
-                self.logger.warning("LLM failed, using fallback")
+                self.logger.info("Trying LLM decision...")
+                llm_decision = self.call_llm(metadata, features)
+                if llm_decision is not None:
+                    return llm_decision
+                self.logger.warning("LLM call failed, fallback activated")
+            else:
+                self.logger.warning("No API key found, fallback activated")
 
             return self.fallback_decision(metadata, features)
 
         except Exception as e:
-            self.logger.error(f"Decision failed: {str(e)}")
+            self.logger.error(f"Decision failed: {e}")
             return None
 
     def call_llm(self, metadata: Dict, features: Dict) -> Optional[Dict]:
-        """Call Claude API to make compression decision."""
         try:
             import anthropic
 
@@ -66,174 +63,149 @@ class DecisionAgent:
 
             self.logger.info("Calling Claude API...")
 
-            message = client.messages.create(
+            response = client.messages.create(
                 model="claude-3-5-sonnet-20241022",
-                max_tokens=500,
-                messages=[{"role": "user", "content": prompt}],
+                max_tokens=400,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": prompt,
+                    }
+                ],
             )
 
-            response_text = message.content[0].text
-            self.logger.info(f"Claude response: {response_text[:100]}...")
+            response_text = response.content[0].text
+            self.logger.info(f"Claude raw response: {response_text[:120]}...")
+            parsed = self.parse_llm_response(response_text)
 
-            return self.parse_llm_response(response_text)
+            if parsed is not None:
+                self.logger.success(
+                    f"LLM decision parsed: {parsed['codec']} / {parsed['bitrate_kbps']} kbps"
+                )
+
+            return parsed
 
         except ImportError:
-            self.logger.warning("anthropic library not installed")
+            self.logger.error("anthropic package not installed")
             return None
         except Exception as e:
-            self.logger.error(f"LLM API call failed: {str(e)}")
+            self.logger.error(f"LLM call failed: {e}")
             return None
 
     def _build_prompt(self, metadata: Dict, features: Dict) -> str:
-        """Build prompt for Claude."""
-        return f"""You are an expert audio compression engineer.
+        return f"""
+You are an audio compression decision agent.
 
-Analyze this audio and recommend compression parameters.
+Input metadata:
+{json.dumps(metadata, indent=2)}
 
-AUDIO INFORMATION:
-- Duration: {metadata['duration_sec']:.1f} seconds
-- Sample Rate: {metadata['sample_rate_hz']} Hz
-- Channels: {metadata['channels']} (1=mono, 2=stereo)
-- Original Size: {metadata['file_size_mb']:.1f} MB
-- Codec: {metadata['codec']}
-- Bit Depth: {metadata.get('bit_depth')}
+Input features:
+{json.dumps(features, indent=2)}
 
-AUDIO ANALYSIS:
-- Content Type: {features['content_type']}
-- Spectral Centroid: {features['centroid']:.0f} Hz
-- Spectral Entropy: {features['entropy']:.2f}
-- Spectral Bandwidth: {features['spectral_bandwidth']:.0f} Hz
-- Zero Crossing Rate: {features['zero_crossing_rate']:.4f}
-- RMS Energy: {features['rms_energy']:.4f}
+Choose the best compression parameters.
 
-DECIDE:
-1. Best codec: mp3, aac, opus, ogg, or flac
-2. Best bitrate_kbps: 32, 48, 64, 96, 128, 192, 256
-3. Sample rate to use
-4. Channels: keep stereo or reduce to mono
-5. Short reasoning
+Rules:
+- voice: prefer opus, 32 to 96 kbps, mono allowed
+- music: prefer aac or mp3, 128 to 256 kbps
+- ambient: moderate bitrate is acceptable
+- mixed: choose a balanced compromise
+- flac only if preserving quality matters more than size
 
-RULES:
-- Voice: prefer Opus at 32-96 kbps
-- Music: prefer AAC/MP3 at 128-256 kbps
-- Ambient: prefer MP3/AAC at 96-128 kbps
-- Long voice recordings: prefer mono and lower bitrate
-- Classical/high-detail music: FLAC is acceptable
-- Mixed content: choose a balanced compromise
-
-RESPONSE FORMAT (MUST BE VALID JSON):
+Return ONLY valid JSON with this schema:
 {{
   "codec": "opus",
   "bitrate_kbps": 64,
-  "sample_rate_hz": {metadata['sample_rate_hz']},
-  "channels": {metadata['channels']},
-  "reasoning": "Your explanation in 1-2 sentences"
+  "sample_rate_hz": 16000,
+  "channels": 1,
+  "reasoning": "short explanation"
 }}
-
-Only return JSON, no extra text.
-"""
+""".strip()
 
     def parse_llm_response(self, response_text: str) -> Optional[Dict]:
-        """
-        Parse JSON from LLM response.
-        Handles markdown-wrapped JSON too.
-        """
         try:
-            decision = json.loads(response_text)
-        except json.JSONDecodeError:
             try:
+                data = json.loads(response_text)
+            except json.JSONDecodeError:
                 if "```json" in response_text:
-                    json_str = response_text.split("```json")[1].split("```")[0].strip()
+                    json_str = response_text.split("```json", 1)[1].split("```", 1)[0].strip()
                 elif "```" in response_text:
-                    json_str = response_text.split("```")[1].split("```")[0].strip()
+                    json_str = response_text.split("```", 1)[1].split("```", 1)[0].strip()
                 else:
                     start = response_text.find("{")
-                    end = response_text.rfind("}") + 1
-                    if start < 0 or end <= start:
+                    end = response_text.rfind("}")
+                    if start == -1 or end == -1 or end <= start:
+                        self.logger.error("No valid JSON found in LLM response")
                         return None
-                    json_str = response_text[start:end]
-                decision = json.loads(json_str)
-            except Exception:
+                    json_str = response_text[start:end + 1]
+
+                data = json.loads(json_str)
+
+            required = ["codec", "bitrate_kbps", "sample_rate_hz", "reasoning"]
+            if not all(key in data for key in required):
+                self.logger.error("Missing required keys in LLM response")
                 return None
 
-        required = ["codec", "bitrate_kbps", "sample_rate_hz", "reasoning"]
-        if not all(k in decision for k in required):
+            codec = str(data["codec"]).lower().strip()
+            if codec not in self.ALLOWED_CODECS:
+                self.logger.error(f"Unsupported codec returned by LLM: {codec}")
+                return None
+
+            bitrate_kbps = int(data["bitrate_kbps"])
+            if bitrate_kbps not in self.ALLOWED_BITRATES:
+                bitrate_kbps = min(self.ALLOWED_BITRATES, key=lambda x: abs(x - bitrate_kbps))
+
+            sample_rate_hz = int(data["sample_rate_hz"])
+            channels = int(data.get("channels", 2))
+            channels = 1 if channels == 1 else 2
+
+            return {
+                "codec": codec,
+                "bitrate_kbps": bitrate_kbps,
+                "sample_rate_hz": sample_rate_hz,
+                "channels": channels,
+                "reasoning": str(data["reasoning"]).strip(),
+                "decision_source": "llm",
+            }
+
+        except Exception as e:
+            self.logger.error(f"Parse failed: {e}")
             return None
-
-        codec = str(decision["codec"]).lower().strip()
-        if codec not in self.ALLOWED_CODECS:
-            return None
-
-        bitrate_kbps = int(decision["bitrate_kbps"])
-        if bitrate_kbps not in self.ALLOWED_BITRATES:
-            bitrate_kbps = min(self.ALLOWED_BITRATES, key=lambda x: abs(x - bitrate_kbps))
-
-        sample_rate_hz = int(decision["sample_rate_hz"])
-        channels = int(decision.get("channels", 2))
-        channels = 1 if channels == 1 else 2
-
-        parsed = {
-            "codec": codec,
-            "bitrate_kbps": bitrate_kbps,
-            "sample_rate_hz": sample_rate_hz,
-            "channels": channels,
-            "reasoning": str(decision["reasoning"]).strip(),
-            "decision_source": "llm",
-        }
-
-        self.logger.success(
-            f"Parsed decision: {parsed['codec']} @ {parsed['bitrate_kbps']} kbps"
-        )
-        return parsed
 
     def fallback_decision(self, metadata: Dict, features: Dict) -> Dict:
-        """
-        Make decision without LLM using simple heuristics.
-        """
-        content_type = features["content_type"]
-        duration_sec = metadata["duration_sec"]
-        original_channels = metadata["channels"]
-        sample_rate_hz = metadata["sample_rate_hz"]
+        content_type = features.get("content_type", "ambient")
+        duration_sec = metadata.get("duration_sec", 0)
+        original_channels = metadata.get("channels", 2)
+        sample_rate_hz = metadata.get("sample_rate_hz", 44100)
 
         if content_type == "voice":
             codec = "opus"
-            bitrate_kbps = 48 if duration_sec > 3600 else 64
+            bitrate_kbps = 48 if duration_sec > 1800 else 64
             channels = 1
             reasoning = (
-                "Speech content detected. Opus with mono compression preserves intelligibility "
-                "while reducing size efficiently."
+                "Voice detected. Opus with mono gives strong compression while keeping speech intelligible."
             )
 
         elif content_type == "music":
             codec = "aac"
-            bitrate_kbps = 192 if original_channels == 2 else 128
+            bitrate_kbps = 192 if original_channels >= 2 else 128
             channels = 2 if original_channels >= 2 else 1
-            reasoning = (
-                "Music content detected. AAC at medium-high bitrate gives a good balance "
-                "between fidelity and compression."
-            )
+            reasoning = "Music detected. AAC at higher bitrate preserves more musical detail."
 
         elif content_type == "mixed":
             codec = "aac"
             bitrate_kbps = 128
             channels = 2 if original_channels >= 2 else 1
-            reasoning = (
-                "Mixed content detected. AAC at 128 kbps provides a balanced compromise "
-                "for both speech and richer sound elements."
-            )
+            reasoning = "Mixed content detected. AAC at 128 kbps is a balanced compromise."
 
-        else:  # ambient
+        else:
             codec = "mp3"
-            bitrate_kbps = 128
+            bitrate_kbps = 96
             channels = 1 if original_channels == 1 else 2
-            reasoning = (
-                "Ambient sound detected. MP3 at moderate bitrate is usually sufficient "
-                "for non-critical background audio."
-            )
+            reasoning = "Ambient content detected. Moderate bitrate is usually enough."
 
         if duration_sec > 3600 and codec != "flac":
             bitrate_kbps = max(32, bitrate_kbps - 32)
-            reasoning += " File is long, so bitrate was reduced to save more storage."
+            reasoning += " Long duration detected, so bitrate was reduced to save space."
 
         return {
             "codec": codec,
@@ -243,22 +215,3 @@ Only return JSON, no extra text.
             "reasoning": reasoning,
             "decision_source": "fallback",
         }
-
-
-class SimpleLogger:
-    """Simple logger for agents."""
-
-    def __init__(self, name: str):
-        self.name = name
-
-    def info(self, msg: str):
-        print(f"ℹ️  [{self.name}] {msg}")
-
-    def success(self, msg: str):
-        print(f"✅ [{self.name}] {msg}")
-
-    def error(self, msg: str):
-        print(f"❌ [{self.name}] {msg}")
-
-    def warning(self, msg: str):
-        print(f"⚠️  [{self.name}] {msg}")
