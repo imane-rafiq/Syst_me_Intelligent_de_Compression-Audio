@@ -1,0 +1,16 @@
+{
+  "file_name": "test.wav",
+  "original_filepath": "C:\\Users\\lenovo\\Desktop\\audio-compression-project\\data\\audio_files\\test.wav",
+  "compressed_filepath": "data\\outputs\\test_compressed.m4a",
+  "duration_sec": 1.82,
+  "compression_ratio": 0.81,
+  "original_size_mb": 0.15,
+  "compressed_size_mb": 0.03,
+  "snr_db": 32.95,
+  "codec": "aac",
+  "bitrate_kbps": 128,
+  "sample_rate_hz": 44100,
+  "channels": 2,
+  "decision_source": "fallback",
+  "reasoning": "Mixed content detected. AAC at 128 kbps provides a balanced compromise for both speech and richer sound elements."
+}

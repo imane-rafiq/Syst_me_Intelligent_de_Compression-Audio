@@ -1,0 +1,212 @@
+{
+  "name": "Audio Compression Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "audio/process",
+        "method": "POST"
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 100],
+      "webhookId": "audio-process-webhook"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://localhost:8000/input/load",
+        "sendBody": true,
+        "bodyParameters": [
+          {
+            "name": "filepath",
+            "value": "={{ $node.Webhook.json.filepath }}"
+          }
+        ],
+        "options": {}
+      },
+      "name": "Input Agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [250, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://localhost:8000/features/extract",
+        "sendBody": true,
+        "bodyParameters": [
+          {
+            "name": "filepath",
+            "value": "={{ $node.Webhook.json.filepath }}"
+          }
+        ],
+        "options": {}
+      },
+      "name": "Feature Extraction",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://localhost:8000/decision/decide",
+        "sendBody": true,
+        "bodyParameters": [
+          {
+            "name": "filepath",
+            "value": "={{ $node.Webhook.json.filepath }}"
+          },
+          {
+            "name": "metadata",
+            "value": "={{ $node['Input Agent'].json }}"
+          },
+          {
+            "name": "features",
+            "value": "={{ $node['Feature Extraction'].json }}"
+          }
+        ],
+        "options": {}
+      },
+      "name": "Decision Agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [250, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://localhost:8000/execution/compress",
+        "sendBody": true,
+        "bodyParameters": [
+          {
+            "name": "filepath",
+            "value": "={{ $node.Webhook.json.filepath }}"
+          },
+          {
+            "name": "codec",
+            "value": "={{ $node['Decision Agent'].json.codec }}"
+          },
+          {
+            "name": "bitrate",
+            "value": "={{ $node['Decision Agent'].json.bitrate }}"
+          },
+          {
+            "name": "sample_rate",
+            "value": "={{ $node['Decision Agent'].json.sample_rate }}"
+          },
+          {
+            "name": "channels",
+            "value": "={{ $node['Input Agent'].json.channels }}"
+          }
+        ],
+        "options": {}
+      },
+      "name": "Execution Agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [250, 500]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://localhost:8000/report/generate",
+        "sendBody": true,
+        "bodyParameters": [
+          {
+            "name": "original_filepath",
+            "value": "={{ $node.Webhook.json.filepath }}"
+          },
+          {
+            "name": "compressed_filepath",
+            "value": "={{ $node['Execution Agent'].json.output_filepath }}"
+          }
+        ],
+        "options": {}
+      },
+      "name": "Report Agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [250, 600]
+    },
+    {
+      "parameters": {
+        "respondWithStatus": 200,
+        "responseBody": "={{ { \n  compression_ratio: $node['Execution Agent'].json.compression_ratio, \n  codec: $node['Decision Agent'].json.codec, \n  bitrate_kbps: $node['Decision Agent'].json.bitrate, \n  snr_db: $node['Report Agent'].json.snr_db, \n  reasoning: $node['Decision Agent'].json.reasoning, \n  compressed_filepath: $node['Execution Agent'].json.output_filepath\n} }}"
+      },
+      "name": "Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [250, 700]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Input Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Input Agent": {
+      "main": [
+        [
+          {
+            "node": "Feature Extraction",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Feature Extraction": {
+      "main": [
+        [
+          {
+            "node": "Decision Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decision Agent": {
+      "main": [
+        [
+          {
+            "node": "Execution Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execution Agent": {
+      "main": [
+        [
+          {
+            "node": "Report Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Report Agent": {
+      "main": [
+        [
+          {
+            "node": "Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
