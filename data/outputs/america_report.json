@@ -1,0 +1,16 @@
+{
+  "file_name": "america.wav",
+  "original_filepath": "data\\audio_files\\america.wav",
+  "compressed_filepath": "data\\outputs\\america_compressed.m4a",
+  "duration_sec": 27.0,
+  "compression_ratio": 0.781,
+  "original_size_mb": 1.65,
+  "compressed_size_mb": 0.36,
+  "snr_db": 37.67,
+  "codec": "aac",
+  "bitrate_kbps": 128,
+  "sample_rate_hz": 32000,
+  "channels": 1,
+  "decision_source": "fallback",
+  "reasoning": "Mixed content detected. AAC at 128 kbps provides balanced compression."
+}

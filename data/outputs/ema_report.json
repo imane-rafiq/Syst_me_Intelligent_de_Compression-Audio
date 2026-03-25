@@ -1,0 +1,16 @@
+{
+  "file_name": "ema.wav",
+  "original_filepath": "data\\audio_files\\ema.wav",
+  "compressed_filepath": "data\\outputs\\ema_compressed.mp3",
+  "duration_sec": 3.16,
+  "compression_ratio": -1.084,
+  "original_size_mb": 0.02,
+  "compressed_size_mb": 0.04,
+  "snr_db": 25.73,
+  "codec": "mp3",
+  "bitrate_kbps": 96,
+  "sample_rate_hz": 44100,
+  "channels": 2,
+  "decision_source": "fallback",
+  "reasoning": "Ambient content detected. MP3 provides good compression for this type."
+}

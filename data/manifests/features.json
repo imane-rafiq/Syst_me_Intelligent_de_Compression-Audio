@@ -1,0 +1,10 @@
+{
+  "filepath": "data\\audio_files\\america.wav",
+  "centroid": 2449.74,
+  "entropy": 0.35,
+  "spectral_bandwidth": 2899.62,
+  "zero_crossing_rate": 0.0443,
+  "rms_energy": 0.2577,
+  "peak_amplitude": 1.0092,
+  "content_type": "mixed"
+}

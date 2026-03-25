@@ -25,8 +25,8 @@ class AudioCompressionOrchestrator:
         execution = self.execution_agent.compress(
             filepath=filepath,
             codec=decision["codec"],
-            bitrate_kbps=decision["bitrate_kbps"],
-            sample_rate_hz=decision["sample_rate_hz"],
+            bitrate_kbps=decision["bitrate"],
+            sample_rate_hz=decision["sample_rate"],
             channels=decision["channels"],
         )
         if execution is None:
@@ -40,7 +40,7 @@ class AudioCompressionOrchestrator:
                 "bitrate_kbps": execution["bitrate_kbps"],
                 "sample_rate_hz": execution["sample_rate_hz"],
                 "channels": execution["channels"],
-                "decision_source": decision["decision_source"],
+                "decision_source": decision.get("decision_source", "fallback"),
                 "reasoning": decision["reasoning"],
             },
         )

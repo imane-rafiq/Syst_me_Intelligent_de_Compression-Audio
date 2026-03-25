@@ -1,0 +1,7 @@
+{
+  "codec": "aac",
+  "bitrate": 128,
+  "sample_rate": 32000,
+  "channels": 1,
+  "reasoning": "Mixed content detected. AAC at 128 kbps is a balanced compromise."
+}

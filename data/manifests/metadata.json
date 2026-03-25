@@ -1,0 +1,11 @@
+{
+  "filepath": "C:\\Users\\lenovo\\Desktop\\COMPRESSION_AUDIO (2)\\COMPRESSION_AUDIO\\COMPRESSION_AUDIO\\data\\audio_files\\america.wav",
+  "filename": "america.wav",
+  "duration": 27.0,
+  "sample_rate": 32000,
+  "channels": 1,
+  "codec": "pcm_s16le",
+  "bit_depth": 16,
+  "filesize_bytes": 1728044,
+  "filesize_mb": 1.65
+}

@@ -54,7 +54,7 @@ class FeatureExtractionAgent:
             content_type = self.detect_content_type(y, sr, spectral, temporal)
 
             features = {
-                "file_path": filepath,
+                "filepath": filepath,
                 **spectral,
                 **temporal,
                 "content_type": content_type,

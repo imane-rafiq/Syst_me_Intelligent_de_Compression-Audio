@@ -207,6 +207,7 @@ async def decision_decide(request: DecideCompressionRequest):
     except HTTPException:
         raise
     except Exception as e:
+        print("DECISION ERROR:", repr(e))
         raise HTTPException(status_code=500, detail=f"Error making decision: {str(e)}")
  
  

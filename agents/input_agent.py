@@ -1,6 +1,3 @@
-# agents/input_agent.py
-# Renommer physiquement le fichier en input_agent.py
-
 import json
 import subprocess
 from pathlib import Path
@@ -52,7 +49,7 @@ class InputAgent:
             self.logger.error("Invalid audio metadata")
             return None
 
-        self.logger.success(f"Loaded and validated: {metadata['file_name']}")
+        self.logger.success(f"Loaded and validated: {metadata['filename']}")
         return metadata
 
     def get_metadata_ffprobe(self, filepath: str) -> Optional[Dict]:
@@ -100,15 +97,15 @@ class InputAgent:
             file_size_bytes = Path(filepath).stat().st_size
 
             metadata = {
-                "file_path": str(Path(filepath).resolve()),
-                "file_name": Path(filepath).name,
-                "duration_sec": float(format_info.get("duration", 0)),
-                "sample_rate_hz": int(audio_stream.get("sample_rate", 0)),
+                "filepath": str(Path(filepath).resolve()),
+                "filename": Path(filepath).name,
+                "duration": float(format_info.get("duration", 0)),
+                "sample_rate": int(audio_stream.get("sample_rate", 0)),
                 "channels": int(audio_stream.get("channels", 0)),
                 "codec": audio_stream.get("codec_name", "unknown"),
                 "bit_depth": bit_depth,
-                "file_size_bytes": file_size_bytes,
-                "file_size_mb": round(file_size_bytes / (1024 * 1024), 2),
+                "filesize_bytes": file_size_bytes,
+                "filesize_mb": round(file_size_bytes / (1024 * 1024), 2),
             }
             return metadata
 
@@ -124,20 +121,21 @@ class InputAgent:
 
     def _validate_metadata(self, metadata: Dict) -> bool:
         required = [
-            "file_path",
-            "file_name",
-            "duration_sec",
-            "sample_rate_hz",
+            "filepath",
+            "filename",
+            "duration",
+            "sample_rate",
             "channels",
             "codec",
         ]
+
         if not all(key in metadata for key in required):
             return False
 
-        if metadata["duration_sec"] <= 0:
+        if metadata["duration"] <= 0:
             return False
 
-        if metadata["sample_rate_hz"] < 8000 or metadata["sample_rate_hz"] > 192000:
+        if metadata["sample_rate"] < 8000 or metadata["sample_rate"] > 192000:
             return False
 
         if metadata["channels"] < 1 or metadata["channels"] > 8:
