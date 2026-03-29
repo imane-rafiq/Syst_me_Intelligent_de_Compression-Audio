@@ -153,13 +153,13 @@ class SimpleLogger:
         self.name = name
 
     def info(self, msg: str):
-        print(f"ℹ️  [{self.name}] {msg}")
+        print(f"INFO [{self.name}] {msg}")
 
     def success(self, msg: str):
-        print(f"✅ [{self.name}] {msg}")
+        print(f"SUCCESS [{self.name}] {msg}")
 
     def error(self, msg: str):
-        print(f"❌ [{self.name}] {msg}")
+        print(f"ERROR [{self.name}] {msg}")
 
     def warning(self, msg: str):
-        print(f"⚠️  [{self.name}] {msg}")
+        print(f"WARNING [{self.name}] {msg}")

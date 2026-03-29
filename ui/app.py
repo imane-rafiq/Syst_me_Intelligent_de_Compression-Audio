@@ -28,7 +28,7 @@ import time
 
 st.set_page_config(
     page_title="Audio Compression System",
-    page_icon="🎵",
+    page_icon="audio",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -388,7 +388,7 @@ def page_compress():
     col1, col2 = st.columns([2, 1])
     
     with col1:
-        st.subheader("Upload Audio File")
+        st.markdown('<div style="color: #000000 !important; font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem;">Upload Audio File</div>', unsafe_allow_html=True)
         uploaded_file = st.file_uploader(
             "Choose an audio file",
             type=["wav", "mp3", "flac", "m4a", "ogg", "opus", "aiff", "aac"],
@@ -453,7 +453,7 @@ def page_audio_to_text():
     col1, col2 = st.columns([2, 1])
     
     with col1:
-        st.subheader("Upload Audio File")
+        st.markdown('<div style="color: #000000 !important; font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem;">Upload Audio File</div>', unsafe_allow_html=True)
         uploaded_file = st.file_uploader(
             "Choose an audio file to transcribe",
             type=["wav", "mp3", "flac", "m4a", "ogg", "opus"],
@@ -546,8 +546,9 @@ def display_compression_results(result):
     
     with col4:
         st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        snr = report.get('snr_db', 0)
-        st.markdown(f'<div class="metric-value">{snr:.1f}</div>', unsafe_allow_html=True)
+        snr = report.get('snr_db')
+        snr_display = f"{snr:.1f}" if snr is not None else "N/A"
+        st.markdown(f'<div class="metric-value">{snr_display}</div>', unsafe_allow_html=True)
         st.markdown('<div class="metric-label">Quality (SNR dB)</div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
     

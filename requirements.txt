@@ -1,0 +1,15 @@
+fastapi>=0.103.1
+uvicorn>=0.23.2
+pydantic>=2.4.2
+python-dotenv>=1.0.0
+librosa>=0.10.1
+numpy>=1.24.3
+anthropic>=0.5.0
+requests>=2.31.0
+soundfile>=0.12.1
+
+# ⚠️ Note importante: 
+# FFmpeg doit être installé au niveau du système d'exploitation.
+# Windows: winget install ffmpeg / choco install ffmpeg
+# Linux: sudo apt install ffmpeg
+# macOS: brew install ffmpeg

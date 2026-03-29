@@ -354,6 +354,6 @@ def read_root():
  
 if __name__ == "__main__":
     import uvicorn
-    print("🚀 Starting Audio Compression Agent System...")
-    print("📖 API Docs: http://localhost:8000/docs")
+    print("Starting Audio Compression Agent System...")
+    print("API Docs: http://localhost:8000/docs")
     uvicorn.run(app, host="0.0.0.0", port=8000)
